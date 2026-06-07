@@ -217,6 +217,7 @@
       <li><a href="{{ url_for('stats.profile') }}"       {% if request.endpoint == 'stats.profile'      %}class="active"{% endif %}>Profile</a></li>
       <li><a href="{{ url_for('social.leaderboard') }}"  {% if request.endpoint == 'social.leaderboard' %}class="active"{% endif %}>Leaderboard</a></li>
       <li><a href="{{ url_for('social.search_players') }}" {% if request.endpoint == 'social.search_players' %}class="active"{% endif %}>Players</a></li>
+      <li><a href="{{ url_for('auth.settings') }}" {% if request.endpoint == 'auth.settings' %}class="active"{% endif %}>Settings</a></li>
       <li><a href="{{ url_for('auth.logout') }}">Log out</a></li>
     </ul>
   </nav>

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Settings — Trackr{% endblock %}
+
+{% block content %}
+<div class="page" style="max-width:500px;">
+
+  <div class="section-label">Account</div>
+  <h1 style="font-family:'Playfair Display',serif; font-size:1.6rem; margin-bottom:1.5rem;">Settings</h1>
+
+  {# ── Change username ── #}
+  <div class="card" style="margin-bottom:1rem;">
+    <div class="card-title">Change username</div>
+    <p style="font-size:0.82rem; color:var(--text-light); margin-bottom:1rem;">
+      Current username: <strong style="color:var(--mist);">{{ current_user.username }}</strong>
+    </p>
+    <form method="POST" action="{{ url_for('auth.settings') }}">
+      <input type="hidden" name="action" value="username">
+      <div class="form-group">
+        <label class="form-label" for="new_username">New username</label>
+        <input class="form-input" type="text" id="new_username" name="new_username"
+               minlength="3" maxlength="40" autocomplete="off" required>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:auto;">Update username</button>
+    </form>
+  </div>
+
+  {# ── Change password ── #}
+  <div class="card" style="margin-bottom:1rem;">
+    <div class="card-title">Change password</div>
+    <form method="POST" action="{{ url_for('auth.settings') }}">
+      <input type="hidden" name="action" value="password">
+      <div class="form-group">
+        <label class="form-label" for="current_password">Current password</label>
+        <input class="form-input" type="password" id="current_password"
+               name="current_password" autocomplete="current-password" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="new_password">New password</label>
+        <input class="form-input" type="password" id="new_password"
+               name="new_password" minlength="8"
+               autocomplete="new-password" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="confirm_password">Confirm new password</label>
+        <input class="form-input" type="password" id="confirm_password"
+               name="confirm_password" minlength="8"
+               autocomplete="new-password" required>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:auto;">Update password</button>
+    </form>
+  </div>
+
+  {# ── Account info ── #}
+  <div class="card">
+    <div class="card-title">Account info</div>
+    <div style="font-size:0.85rem; color:var(--mist);">
+      <div style="display:flex; justify-content:space-between; padding:0.5rem 0; border-bottom:1px solid var(--border);">
+        <span style="color:var(--text-light);">Email</span>
+        <span>{{ current_user.email }}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:0.5rem 0;">
+        <span style="color:var(--text-light);">Member since</span>
+        <span>{{ current_user.created_at.strftime('%B %Y') }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:1.5rem; text-align:center;">
+    <a href="{{ url_for('auth.logout') }}"
+       style="font-size:0.82rem; color:var(--red); text-decoration:none;">
+      Log out
+    </a>
+  </div>
+
+</div>
+{% endblock %}

@@ -172,3 +172,13 @@
 
 </div>
 {% endblock %}
+{# appended — delete button for the match logger #}
+{% if match.player1_id == current_user.id %}
+<div style="margin-top:1.5rem; text-align:center;">
+  <form method="POST"
+        action="{{ url_for('matches.delete_match', match_id=match.id) }}"
+        onsubmit="return confirm('Permanently delete this match? This cannot be undone.');">
+    <button type="submit" class="btn btn-danger btn-sm">Delete match</button>
+  </form>
+</div>
+{% endif %}

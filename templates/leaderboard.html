@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Leaderboard — Trackr{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  <div class="section-label">Rankings</div>
+  <h1 style="font-family:'Playfair Display',serif; font-size:1.6rem; margin-bottom:1.5rem;">Leaderboard</h1>
+
+  {# ── Sport filter tabs ── #}
+  <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1.5rem;">
+    <a href="{{ url_for('social.leaderboard') }}"
+       class="btn btn-sm {% if not sport %}btn-primary{% else %}btn-outline{% endif %}"
+       style="width:auto;">All sports</a>
+    {% for s in sports %}
+      <a href="{{ url_for('social.leaderboard', sport_id=s.id) }}"
+         class="btn btn-sm {% if sport and sport.id == s.id %}btn-primary{% else %}btn-outline{% endif %}"
+         style="width:auto;">{{ s.name }}</a>
+    {% endfor %}
+  </div>
+
+  {# ── Rankings table ── #}
+  {% if rankings %}
+    <div class="card" style="padding:0;">
+      {# Header #}
+      <div style="display:grid; grid-template-columns:40px 1fr repeat(3,60px) 70px;
+                  gap:0.5rem; padding:0.75rem 1.25rem;
+                  border-bottom:1px solid var(--border);">
+        <div style="font-size:0.65rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-light);">#</div>
+        <div style="font-size:0.65rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-light);">Player</div>
+        <div style="font-size:0.65rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-light); text-align:center;">W</div>
+        <div style="font-size:0.65rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-light); text-align:center;">L</div>
+        <div style="font-size:0.65rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-light); text-align:center;">Played</div>
+        <div style="font-size:0.65rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-light); text-align:right;">Win %</div>
+      </div>
+
+      {% for entry in rankings %}
+        <div style="display:grid; grid-template-columns:40px 1fr repeat(3,60px) 70px;
+                    gap:0.5rem; padding:0.85rem 1.25rem;
+                    border-bottom:1px solid var(--border);
+                    {% if entry.user.id == current_user.id %}
+                      background:rgba(200,169,110,0.06);
+                    {% endif %}
+                    align-items:center;">
+
+          {# Rank #}
+          <div style="font-family:'Playfair Display',serif; font-size:1rem;
+                      color:{% if entry.rank == 1 %}var(--accent)
+                            {% elif entry.rank == 2 %}var(--mist)
+                            {% elif entry.rank == 3 %}#c27c4a
+                            {% else %}var(--text-light){% endif %};">
+            {{ entry.rank }}
+          </div>
+
+          {# Player name #}
+          <div>
+            <a href="{{ url_for('stats.public_profile', user_id=entry.user.id) }}"
+               style="font-size:0.95rem; font-weight:500; color:var(--white); text-decoration:none;">
+              {{ entry.user.username }}
+              {% if entry.user.id == current_user.id %}
+                <span style="font-size:0.65rem; color:var(--text-light); font-weight:400;"> (you)</span>
+              {% endif %}
+            </a>
+          </div>
+
+          {# W / L / Played #}
+          <div style="text-align:center; font-size:0.9rem; color:var(--green);">{{ entry.wins }}</div>
+          <div style="text-align:center; font-size:0.9rem; color:var(--red);">{{ entry.losses }}</div>
+          <div style="text-align:center; font-size:0.9rem; color:var(--mist);">{{ entry.total }}</div>
+
+          {# Win rate bar + % #}
+          <div style="text-align:right;">
+            <div style="font-size:0.95rem; font-weight:500;
+                        color:{% if entry.rate >= 0.6 %}var(--green)
+                              {% elif entry.rate >= 0.4 %}var(--mist)
+                              {% else %}var(--red){% endif %};">
+              {{ (entry.rate * 100) | round(0) | int }}%
+            </div>
+            <div style="height:3px; background:rgba(184,205,224,0.1);
+                        border-radius:2px; margin-top:4px; overflow:hidden;">
+              <div style="height:100%; width:{{ (entry.rate * 100) | round(0) | int }}%;
+                          background:{% if entry.rate >= 0.6 %}var(--green)
+                                     {% elif entry.rate >= 0.4 %}var(--mist)
+                                     {% else %}var(--red){% endif %};
+                          border-radius:2px;"></div>
+            </div>
+          </div>
+
+        </div>
+      {% endfor %}
+    </div>
+
+    <div style="font-size:0.72rem; color:var(--text-light); margin-top:0.75rem; text-align:center;">
+      Minimum {{ min_matches }} confirmed matches to appear · Friends only
+    </div>
+
+  {% else %}
+    <div class="empty-state">
+      {% if sport %}
+        No one has played enough {{ sport.name }} matches yet (minimum {{ min_matches }}).
+      {% else %}
+        No rankings yet — everyone needs at least {{ min_matches }} confirmed matches to appear.
+      {% endif %}
+      <br><br>
+      <a href="{{ url_for('matches.log_match') }}" style="color:var(--accent);">Log a match →</a>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

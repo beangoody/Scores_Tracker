@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Players — Trackr{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  <div class="section-label">Social</div>
+  <h1 style="font-family:'Playfair Display',serif; font-size:1.6rem; margin-bottom:1.5rem;">Players</h1>
+
+  {# ── Search bar ── #}
+  <form method="GET" action="{{ url_for('social.search_players') }}" style="margin-bottom:1.5rem;">
+    <div style="display:flex; gap:0.75rem;">
+      <input class="form-input" type="text" name="q" value="{{ query }}"
+             placeholder="Search by username…" autocomplete="off" style="flex:1;">
+      <button type="submit" class="btn btn-outline" style="white-space:nowrap; width:auto;">Search</button>
+    </div>
+  </form>
+
+  {# ── Search results ── #}
+  {% if query %}
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-title">Results for "{{ query }}"</div>
+      {% if results %}
+        {% for item in results %}
+          <div style="display:flex; align-items:center; justify-content:space-between;
+                      padding:0.75rem 0; border-bottom:1px solid var(--border);">
+            <div style="font-size:0.95rem; font-weight:500; color:var(--white);">
+              {{ item.user.username }}
+            </div>
+            <div>
+              {% if item.status == 'friends' %}
+                <span class="badge badge-green">Friends</span>
+              {% elif item.status == 'pending' %}
+                <span class="badge badge-amber">Pending</span>
+              {% else %}
+                <form method="POST"
+                      action="{{ url_for('social.send_friend_request', user_id=item.user.id) }}">
+                  <button type="submit" class="btn btn-outline btn-sm">+ Add</button>
+                </form>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state" style="padding:1.5rem;">
+          No players found for "{{ query }}".
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {# ── Pending requests received ── #}
+  {% if pending %}
+    <div class="card" style="margin-bottom:1rem; border-color:rgba(200,169,110,0.25);">
+      <div class="card-title">
+        Friend requests
+        <span style="font-size:0.75rem; color:var(--accent); font-family:'DM Sans',sans-serif;
+                     font-weight:400; margin-left:0.5rem;">{{ pending | length }}</span>
+      </div>
+      {% for req in pending %}
+        <div style="display:flex; align-items:center; justify-content:space-between;
+                    padding:0.75rem 0; border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-size:0.95rem; font-weight:500; color:var(--white);">
+              {{ req.from_user.username }}
+            </div>
+            <div style="font-size:0.72rem; color:var(--text-light);">
+              wants to be your friend
+            </div>
+          </div>
+          <div style="display:flex; gap:0.5rem;">
+            <form method="POST"
+                  action="{{ url_for('social.accept_friend_request', req_id=req.id) }}">
+              <button type="submit" class="btn btn-primary btn-sm">Accept</button>
+            </form>
+            <form method="POST"
+                  action="{{ url_for('social.decline_friend_request', req_id=req.id) }}">
+              <button type="submit" class="btn btn-outline btn-sm">Decline</button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {# ── Friend recommendations ── #}
+  {% if recommendations and not query %}
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-title">Suggested players</div>
+      <div style="font-size:0.78rem; color:var(--text-light); margin-bottom:1rem;">
+        People you might know
+      </div>
+      {% for rec in recommendations %}
+        <div style="display:flex; align-items:center; justify-content:space-between;
+                    padding:0.75rem 0; border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-size:0.95rem; font-weight:500; color:var(--white);">
+              {{ rec.user.username }}
+            </div>
+            <div style="font-size:0.72rem; margin-top:0.15rem;">
+              {% if rec.mutuals > 0 %}
+                <span style="color:var(--accent);">●</span>
+              {% else %}
+                <span style="color:var(--slate-light);">●</span>
+              {% endif %}
+              <span style="color:var(--text-light);">{{ rec.reason }}</span>
+            </div>
+          </div>
+          <form method="POST"
+                action="{{ url_for('social.send_friend_request', user_id=rec.user.id) }}">
+            <button type="submit" class="btn btn-outline btn-sm">+ Add</button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {# ── Current friends list ── #}
+  <div class="card">
+    <div class="card-title">
+      Your friends
+      <span style="font-size:0.75rem; color:var(--text-light); font-family:'DM Sans',sans-serif;
+                   font-weight:400; margin-left:0.5rem;">{{ friends | length }}</span>
+    </div>
+
+    {% if friends %}
+      {% for friend in friends %}
+        <div style="display:flex; align-items:center; justify-content:space-between;
+                    padding:0.75rem 0; border-bottom:1px solid var(--border);">
+          <a href="{{ url_for('stats.public_profile', user_id=friend.id) }}"
+             style="text-decoration:none; flex:1;">
+            <div style="font-size:0.95rem; font-weight:500; color:var(--white);">
+              {{ friend.username }}
+            </div>
+            <div style="font-size:0.72rem; color:var(--text-light); margin-top:0.15rem;">
+              View profile →
+            </div>
+          </a>
+          <div style="display:flex; gap:0.5rem; align-items:center; flex-shrink:0;">
+            <a href="{{ url_for('stats.head_to_head', opponent_id=friend.id) }}"
+               class="btn btn-outline btn-sm">H2H</a>
+            {# Remove friend — separate form, no inline JS confirm to avoid quote issues #}
+            <form method="POST"
+                  action="{{ url_for('social.remove_friend', user_id=friend.id) }}"
+                  class="remove-friend-form"
+                  data-name="{{ friend.username | e }}">
+              <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state" style="padding:1.5rem;">
+        No friends yet. Search for players above or check the suggestions.
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+  // Confirm dialog handled in JS so Jinja quote conflicts can't break it
+  document.querySelectorAll('.remove-friend-form').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+      var name = form.dataset.name || 'this player';
+      if (!confirm('Remove ' + name + ' from your friends?')) {
+        e.preventDefault();
+      }
+    });
+  });
+</script>
+{% endblock %}

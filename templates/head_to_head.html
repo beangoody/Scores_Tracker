@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}H2H vs {{ opponent.username }} — Trackr{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  <a href="{{ url_for('stats.public_profile', user_id=opponent.id) }}"
+     style="font-size:0.78rem; color:var(--text-light); text-decoration:none;
+            display:inline-flex; align-items:center; gap:0.4rem; margin-bottom:1.25rem;">
+    ← {{ opponent.username }}'s profile
+  </a>
+
+  <div class="section-label">Head to head</div>
+  <h1 style="font-family:'Playfair Display',serif; font-size:1.6rem; margin-bottom:0.5rem;">
+    You vs {{ opponent.username }}
+  </h1>
+
+  {# ── Sport filter ── #}
+  <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1.5rem;">
+    <a href="{{ url_for('stats.head_to_head', opponent_id=opponent.id) }}"
+       class="btn btn-sm {% if not sport %}btn-primary{% else %}btn-outline{% endif %}"
+       style="width:auto;">All sports</a>
+    {% for s in sports %}
+      <a href="{{ url_for('stats.head_to_head', opponent_id=opponent.id, sport_id=s.id) }}"
+         class="btn btn-sm {% if sport and sport.id == s.id %}btn-primary{% else %}btn-outline{% endif %}"
+         style="width:auto;">{{ s.name }}</a>
+    {% endfor %}
+  </div>
+
+  {# ── H2H stat comparison ── #}
+  <div class="card" style="margin-bottom:1rem;">
+    {% if sport %}
+      <div style="text-align:center; font-size:0.72rem; letter-spacing:0.1em;
+                  text-transform:uppercase; color:var(--accent); margin-bottom:1rem;">
+        {{ sport.name }} only
+      </div>
+    {% endif %}
+
+    <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:1rem; align-items:center;">
+
+      {# You #}
+      <div style="text-align:center;">
+        <div style="font-family:'Playfair Display',serif; font-size:1rem; color:var(--mist); margin-bottom:0.75rem;">
+          You
+        </div>
+        <div style="font-family:'Playfair Display',serif; font-size:3rem; font-weight:700; line-height:1;
+                    color:{% if my_stats.wins > opp_stats.wins %}var(--green)
+                          {% elif my_stats.wins < opp_stats.wins %}var(--red)
+                          {% else %}var(--mist){% endif %};">
+          {{ my_stats.wins }}
+        </div>
+        <div style="font-size:0.65rem; text-transform:uppercase; letter-spacing:0.1em;
+                    color:var(--text-light); margin-top:0.35rem;">wins</div>
+        <div style="margin-top:0.75rem; font-size:0.85rem; color:var(--text-light);">
+          {{ (my_stats.rate * 100) | round(0) | int }}% win rate
+        </div>
+        {% if my_stats.draws > 0 %}
+          <div style="font-size:0.75rem; color:var(--text-light); margin-top:0.25rem;">
+            {{ my_stats.draws }} draw{{ 's' if my_stats.draws != 1 }}
+          </div>
+        {% endif %}
+      </div>
+
+      {# VS divider #}
+      <div style="text-align:center;">
+        <div style="font-size:0.75rem; color:var(--text-light); margin-bottom:0.25rem;">
+          {{ my_stats.total }} played
+        </div>
+        <div style="font-family:'Playfair Display',serif; font-size:1.1rem; color:var(--border);">vs</div>
+      </div>
+
+      {# Opponent #}
+      <div style="text-align:center;">
+        <div style="font-family:'Playfair Display',serif; font-size:1rem; color:var(--mist); margin-bottom:0.75rem;">
+          {{ opponent.username }}
+        </div>
+        <div style="font-family:'Playfair Display',serif; font-size:3rem; font-weight:700; line-height:1;
+                    color:{% if opp_stats.wins > my_stats.wins %}var(--green)
+                          {% elif opp_stats.wins < my_stats.wins %}var(--red)
+                          {% else %}var(--mist){% endif %};">
+          {{ opp_stats.wins }}
+        </div>
+        <div style="font-size:0.65rem; text-transform:uppercase; letter-spacing:0.1em;
+                    color:var(--text-light); margin-top:0.35rem;">wins</div>
+        <div style="margin-top:0.75rem; font-size:0.85rem; color:var(--text-light);">
+          {{ (opp_stats.rate * 100) | round(0) | int }}% win rate
+        </div>
+        {% if opp_stats.draws > 0 %}
+          <div style="font-size:0.75rem; color:var(--text-light); margin-top:0.25rem;">
+            {{ opp_stats.draws }} draw{{ 's' if opp_stats.draws != 1 }}
+          </div>
+        {% endif %}
+      </div>
+
+    </div>
+
+    {# Win rate bar #}
+    {% if my_stats.total > 0 %}
+      {% set my_pct = (my_stats.wins / my_stats.total * 100) | round(0) | int %}
+      {% set opp_pct = 100 - my_pct %}
+      <div style="margin-top:1.5rem;">
+        <div style="height:6px; border-radius:3px; overflow:hidden;
+                    display:flex; background:rgba(184,205,224,0.1);">
+          <div style="width:{{ my_pct }}%; background:var(--green); transition:width 0.4s;"></div>
+          <div style="width:{{ opp_pct }}%; background:var(--red);"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between;
+                    font-size:0.65rem; color:var(--text-light); margin-top:0.4rem;">
+          <span>You {{ my_pct }}%</span>
+          <span>{{ opp_pct }}% {{ opponent.username }}</span>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  {# ── Recent matches ── #}
+  <div class="card">
+    <div class="card-title">Recent matches</div>
+
+    {% if recent %}
+      {% for match in recent %}
+        {% set is_p1    = (match.player1_id == current_user.id) %}
+        {% set summary  = match.score_summary() %}
+        {% set my_games = summary.player1_games if is_p1 else summary.player2_games %}
+        {% set op_games = summary.player2_games if is_p1 else summary.player1_games %}
+
+        <a href="{{ url_for('matches.match_detail', match_id=match.id) }}" class="match-row">
+          <div>
+            <div class="match-vs">
+              {{ match.sport.name }}
+              {% if match.location %}
+                <span style="font-weight:400; color:var(--text-light);"> · {{ match.location }}</span>
+              {% endif %}
+            </div>
+            <div class="match-meta">{{ match.played_at.strftime('%d %b %Y') }}</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.75rem;">
+            {% if match.winner_id == current_user.id %}
+              <span class="badge badge-green">W</span>
+            {% elif match.winner_id is none and match.confirmed %}
+              <span class="badge badge-muted">Draw</span>
+            {% elif not match.confirmed %}
+              <span class="badge badge-amber">Pending</span>
+            {% else %}
+              <span class="badge badge-red">L</span>
+            {% endif %}
+            {% if match.sport.scoring_type == 'numeric' %}
+              <span class="match-score">{{ my_games }}–{{ op_games }}</span>
+            {% endif %}
+          </div>
+        </a>
+
+      {% endfor %}
+    {% else %}
+      <div class="empty-state" style="padding:1.5rem;">
+        No confirmed matches against {{ opponent.username }}
+        {% if sport %} in {{ sport.name }}{% endif %} yet.
+        <br>
+        <a href="{{ url_for('matches.log_match') }}" style="color:var(--accent);">Log one →</a>
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
