@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Home — Trackr{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:1.5rem; flex-wrap:wrap; gap:0.75rem;">
+    <div>
+      <div class="section-label">Dashboard</div>
+      <h1 style="font-family:'Playfair Display',serif; font-size:1.6rem; font-weight:700; color:var(--white);">
+        Hey, {{ current_user.username }}
+      </h1>
+    </div>
+    <a href="{{ url_for('matches.log_match') }}" class="btn btn-primary" style="width:auto;">
+      + Log match
+    </a>
+  </div>
+
+  {# ── Recent matches ── #}
+  <div class="card">
+    <div class="card-title">Recent matches</div>
+
+    {% if matches %}
+      {% for match in matches %}
+        {% set is_p1 = (match.player1_id == current_user.id) %}
+        {% set opponent = match.player2 if is_p1 else match.player1 %}
+        {% set summary  = match.score_summary() %}
+
+        <a href="{{ url_for('matches.match_detail', match_id=match.id) }}" class="match-row">
+          <div>
+            <div class="match-vs">
+              vs {{ opponent.username }}
+              <span style="font-size:0.72rem; color:var(--text-light); font-weight:400; margin-left:0.4rem;">
+                {{ match.sport.name }}
+              </span>
+            </div>
+            <div class="match-meta">
+              {{ match.played_at.strftime('%d %b %Y') }}
+              {% if match.location %} · {{ match.location }}{% endif %}
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:0.75rem;">
+            {# Result badge #}
+            {% if not match.confirmed %}
+              <span class="badge badge-muted">Pending</span>
+            {% elif match.winner_id == current_user.id %}
+              <span class="badge badge-green">W</span>
+            {% elif match.winner_id is none %}
+              <span class="badge badge-muted">Draw</span>
+            {% else %}
+              <span class="badge badge-red">L</span>
+            {% endif %}
+
+            {# Score summary for numeric sports #}
+            {% if match.sport.scoring_type == 'numeric' %}
+              <div class="match-score">
+                {% if is_p1 %}
+                  {{ summary.player1_games }}–{{ summary.player2_games }}
+                {% else %}
+                  {{ summary.player2_games }}–{{ summary.player1_games }}
+                {% endif %}
+              </div>
+            {% endif %}
+          </div>
+        </a>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">
+        No matches yet.<br>
+        <a href="{{ url_for('matches.log_match') }}">Log your first match →</a>
+      </div>
+    {% endif %}
+  </div>
+
+  {# ── Quick links ── #}
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:0.5rem;">
+    <a href="{{ url_for('stats.profile') }}" class="card" style="text-decoration:none; display:block;">
+      <div style="font-size:0.7rem; font-weight:500; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); margin-bottom:0.4rem;">Profile</div>
+      <div style="font-size:0.9rem; color:var(--mist);">Your stats &amp; form</div>
+    </a>
+    <a href="{{ url_for('social.leaderboard') }}" class="card" style="text-decoration:none; display:block;">
+      <div style="font-size:0.7rem; font-weight:500; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); margin-bottom:0.4rem;">Leaderboard</div>
+      <div style="font-size:0.9rem; color:var(--mist);">See how you rank</div>
+    </a>
+  </div>
+
+</div>
+{% endblock %}

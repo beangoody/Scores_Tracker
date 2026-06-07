@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Create account — Trackr{% endblock %}
+
+{% block content %}
+<div style="max-width:400px; margin:4rem auto; padding:0 1.25rem;">
+
+  <div style="text-align:center; margin-bottom:2rem;">
+    <div style="font-family:'Playfair Display',serif; font-size:2rem; color:var(--accent); margin-bottom:0.25rem;">Trackr</div>
+    <div style="font-size:0.85rem; color:var(--text-light);">Track every match. Own every stat.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Create account</div>
+
+    <form method="POST" action="{{ url_for('auth.register') }}">
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input class="form-input" type="text" id="username" name="username"
+               value="{{ username }}" autocomplete="username"
+               minlength="3" maxlength="40" autofocus required>
+        <div style="font-size:0.72rem; color:var(--text-light); margin-top:0.35rem;">
+          3–40 characters. This is how other players find you.
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="email">Email</label>
+        <input class="form-input" type="email" id="email" name="email"
+               value="{{ email }}" autocomplete="email" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input class="form-input" type="password" id="password" name="password"
+               autocomplete="new-password" minlength="8" required>
+        <div style="font-size:0.72rem; color:var(--text-light); margin-top:0.35rem;">
+          At least 8 characters.
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Create account</button>
+    </form>
+  </div>
+
+  <p style="text-align:center; margin-top:1.25rem; font-size:0.85rem; color:var(--text-light);">
+    Already have an account?
+    <a href="{{ url_for('auth.login') }}" style="color:var(--accent); text-decoration:none;">Log in</a>
+  </p>
+
+</div>
+{% endblock %}

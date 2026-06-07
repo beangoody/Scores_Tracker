@@ -26,7 +26,7 @@ def load_user(user_id):
 
 
 def create_app(config_name: str = "development") -> Flask:
-    app = Flask(__name__, instance_relative_config=False)
+    app = Flask(__name__, instance_relative_config=False, template_folder="../templates", static_folder="../static")
     app.config.from_object(config_map.get(config_name, config_map["default"]))
 
     # Extensions

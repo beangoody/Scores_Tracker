@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0f1e3c">
+  <title>{% block title %}Trackr{% endblock %}</title>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy:        #0f1e3c;
+      --slate:       #2d4a7a;
+      --slate-light: #4a6fa5;
+      --mist:        #b8cde0;
+      --white:       #ffffff;
+      --accent:      #c8a96e;
+      --accent-light:#e8d5a3;
+      --text-light:  #8fa8c4;
+      --green:       #5dba8a;
+      --red:         #e05c5c;
+      --bg-card:     rgba(255,255,255,0.04);
+      --border:      rgba(184,205,224,0.12);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--navy);
+      color: var(--white);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 80px; /* space for mobile bottom nav */
+    }
+
+    /* ── TOP NAV (desktop) ── */
+    .topnav {
+      display: none;
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(15,30,60,0.97);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(200,169,110,0.2);
+      padding: 0 2rem; height: 60px;
+      align-items: center; justify-content: space-between;
+    }
+    .topnav-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.2rem; color: var(--accent); text-decoration: none;
+    }
+    .topnav-links { display: flex; gap: 2rem; list-style: none; }
+    .topnav-links a {
+      font-size: 0.82rem; font-weight: 500; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--mist); text-decoration: none;
+      transition: color 0.2s;
+    }
+    .topnav-links a:hover,
+    .topnav-links a.active { color: var(--accent); }
+
+    /* ── BOTTOM NAV (mobile) ── */
+    .bottomnav {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(15,30,60,0.97);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid rgba(200,169,110,0.15);
+      display: flex; justify-content: space-around; align-items: center;
+      height: 64px; padding: 0 0.5rem;
+    }
+    .bottomnav a {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 3px; text-decoration: none; color: var(--text-light);
+      font-size: 0.6rem; font-weight: 500; letter-spacing: 0.08em;
+      text-transform: uppercase; padding: 0.5rem 1rem;
+      transition: color 0.2s;
+    }
+    .bottomnav a.active { color: var(--accent); }
+    .bottomnav a svg { width: 22px; height: 22px; stroke: currentColor; fill: none;
+      stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── PAGE WRAPPER ── */
+    .page { max-width: 860px; margin: 0 auto; padding: 1.5rem 1.25rem; }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 1.5rem; margin-bottom: 1rem;
+    }
+    .card-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem; font-weight: 700; color: var(--white);
+      margin-bottom: 1rem;
+    }
+
+    /* ── STAT BOXES ── */
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px,1fr)); gap: 1px; margin-bottom: 1rem; }
+    .stat-box { padding: 1rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border); text-align: center; }
+    .stat-num { font-family: 'Playfair Display', serif; font-size: 1.8rem; font-weight: 700; color: var(--accent); line-height: 1; }
+    .stat-lbl { font-size: 0.65rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-light); margin-top: 0.3rem; }
+
+    /* ── FORMS ── */
+    .form-group { margin-bottom: 1.25rem; }
+    .form-label {
+      display: block; font-size: 0.75rem; font-weight: 500;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text-light); margin-bottom: 0.5rem;
+    }
+    .form-input {
+      width: 100%; background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border); color: var(--white);
+      font-family: 'DM Sans', sans-serif; font-size: 0.95rem;
+      padding: 0.75rem 1rem; outline: none;
+      transition: border-color 0.2s;
+      -webkit-appearance: none; border-radius: 0;
+    }
+    .form-input:focus { border-color: var(--accent); }
+    .form-input::placeholder { color: var(--text-light); }
+    select.form-input option { background: var(--navy); color: var(--white); }
+
+    /* ── BUTTONS ── */
+    .btn {
+      font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 500;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 0.85rem 2rem; cursor: pointer; border: none;
+      text-decoration: none; display: inline-block;
+      transition: all 0.2s; border-radius: 0;
+    }
+    .btn-primary { background: var(--accent); color: var(--navy); width: 100%; text-align: center; }
+    .btn-primary:hover { background: var(--accent-light); }
+    .btn-outline {
+      background: transparent; color: var(--mist);
+      border: 1px solid rgba(184,205,224,0.3);
+    }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-danger { background: transparent; color: var(--red); border: 1px solid rgba(224,92,92,0.3); }
+    .btn-danger:hover { background: rgba(224,92,92,0.1); }
+    .btn-sm { padding: 0.5rem 1rem; font-size: 0.72rem; }
+
+    /* ── BADGES ── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      font-size: 0.65rem; font-weight: 500; letter-spacing: 0.1em;
+      text-transform: uppercase; padding: 0.22rem 0.6rem; border-radius: 99px;
+    }
+    .badge-green  { background: rgba(93,186,138,0.15); color: var(--green);  border: 1px solid rgba(93,186,138,0.3); }
+    .badge-amber  { background: rgba(200,169,110,0.12); color: var(--accent); border: 1px solid rgba(200,169,110,0.25); }
+    .badge-muted  { background: rgba(184,205,224,0.08); color: var(--text-light); border: 1px solid rgba(184,205,224,0.15); }
+    .badge-red    { background: rgba(224,92,92,0.12);  color: var(--red);    border: 1px solid rgba(224,92,92,0.25); }
+
+    /* ── FLASH MESSAGES ── */
+    .flashes { list-style: none; margin-bottom: 1rem; }
+    .flash {
+      padding: 0.75rem 1rem; margin-bottom: 0.5rem;
+      font-size: 0.85rem; border-left: 3px solid;
+    }
+    .flash-success { background: rgba(93,186,138,0.1);  border-color: var(--green);  color: var(--green); }
+    .flash-error   { background: rgba(224,92,92,0.1);   border-color: var(--red);    color: var(--red); }
+    .flash-info    { background: rgba(184,205,224,0.08); border-color: var(--mist);  color: var(--mist); }
+    .flash-warning { background: rgba(200,169,110,0.1); border-color: var(--accent); color: var(--accent); }
+
+    /* ── MATCH ROW ── */
+    .match-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.85rem 0; border-bottom: 1px solid var(--border);
+      gap: 1rem; text-decoration: none; color: inherit;
+      transition: background 0.15s;
+    }
+    .match-row:last-child { border-bottom: none; }
+    .match-row:hover { background: rgba(255,255,255,0.02); }
+    .match-vs { font-size: 0.9rem; font-weight: 500; color: var(--white); }
+    .match-meta { font-size: 0.75rem; color: var(--text-light); margin-top: 0.2rem; }
+    .match-score { font-size: 0.85rem; color: var(--mist); text-align: right; }
+
+    /* ── SECTION LABEL ── */
+    .section-label {
+      font-size: 0.7rem; font-weight: 500; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--accent);
+      margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem;
+    }
+    .section-label::before { content: ''; display: block; width: 1.5rem; height: 1px; background: var(--accent); }
+
+    /* ── DIVIDER ── */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      text-align: center; padding: 3rem 1rem;
+      color: var(--text-light); font-size: 0.9rem; font-weight: 300;
+    }
+    .empty-state a { color: var(--accent); text-decoration: none; }
+
+    /* ── DESKTOP OVERRIDES ── */
+    @media (min-width: 640px) {
+      .topnav { display: flex; }
+      .bottomnav { display: none; }
+      body { padding-bottom: 0; }
+      .page { padding: 2rem; }
+      .btn-primary { width: auto; }
+    }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+  {# ── Desktop top nav ── #}
+  {% if current_user.is_authenticated %}
+  <nav class="topnav">
+    <a class="topnav-logo" href="{{ url_for('matches.dashboard') }}">Trackr</a>
+    <ul class="topnav-links">
+      <li><a href="{{ url_for('matches.dashboard') }}"   {% if request.endpoint == 'matches.dashboard'  %}class="active"{% endif %}>Home</a></li>
+      <li><a href="{{ url_for('matches.log_match') }}"   {% if request.endpoint == 'matches.log_match'  %}class="active"{% endif %}>Log Match</a></li>
+      <li><a href="{{ url_for('stats.profile') }}"       {% if request.endpoint == 'stats.profile'      %}class="active"{% endif %}>Profile</a></li>
+      <li><a href="{{ url_for('social.leaderboard') }}"  {% if request.endpoint == 'social.leaderboard' %}class="active"{% endif %}>Leaderboard</a></li>
+      <li><a href="{{ url_for('social.search_players') }}" {% if request.endpoint == 'social.search_players' %}class="active"{% endif %}>Players</a></li>
+      <li><a href="{{ url_for('auth.logout') }}">Log out</a></li>
+    </ul>
+  </nav>
+  {% endif %}
+
+  {# ── Flash messages ── #}
+  <div class="page" style="padding-bottom:0; padding-top: {% if current_user.is_authenticated %}1rem{% else %}0{% endif %}">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul class="flashes">
+          {% for category, message in messages %}
+            <li class="flash flash-{{ category }}">{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+  </div>
+
+  {# ── Main content ── #}
+  {% block content %}{% endblock %}
+
+  {# ── Mobile bottom nav ── #}
+  {% if current_user.is_authenticated %}
+  <nav class="bottomnav">
+    <a href="{{ url_for('matches.dashboard') }}"    {% if request.endpoint == 'matches.dashboard'       %}class="active"{% endif %}>
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home
+    </a>
+    <a href="{{ url_for('matches.log_match') }}"    {% if request.endpoint == 'matches.log_match'       %}class="active"{% endif %}>
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Log
+    </a>
+    <a href="{{ url_for('stats.profile') }}"        {% if request.endpoint == 'stats.profile'           %}class="active"{% endif %}>
+      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Profile
+    </a>
+    <a href="{{ url_for('social.leaderboard') }}"   {% if request.endpoint == 'social.leaderboard'      %}class="active"{% endif %}>
+      <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Board
+    </a>
+    <a href="{{ url_for('social.search_players') }}" {% if request.endpoint == 'social.search_players'  %}class="active"{% endif %}>
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Players
+    </a>
+  </nav>
+  {% endif %}
+
+</body>
+</html>

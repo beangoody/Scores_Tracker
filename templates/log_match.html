@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+{% block title %}Log Match — Trackr{% endblock %}
+
+{% block extra_head %}
+<style>
+  .sport-btn {
+    background: var(--bg-card); border: 1px solid var(--border);
+    color: var(--mist); font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem; font-weight: 500; padding: 0.6rem 1rem;
+    cursor: pointer; transition: all 0.15s; border-radius: 0;
+    letter-spacing: 0.05em;
+  }
+  .sport-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .sport-btn.selected { background: rgba(200,169,110,0.12); border-color: var(--accent); color: var(--accent); }
+
+  .game-row {
+    display: grid; grid-template-columns: 1fr auto 1fr auto;
+    gap: 0.75rem; align-items: center; margin-bottom: 0.75rem;
+  }
+  .game-label {
+    font-size: 0.65rem; font-weight: 500; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--text-light);
+    text-align: center; padding: 0.25rem 0;
+  }
+  .score-input {
+    width: 100%; background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border); color: var(--white);
+    font-family: 'DM Sans', sans-serif; font-size: 1.1rem;
+    font-weight: 500; padding: 0.75rem;
+    text-align: center; outline: none;
+    transition: border-color 0.2s; border-radius: 0;
+    -webkit-appearance: none;
+  }
+  .score-input:focus { border-color: var(--accent); }
+  .score-input.valid   { border-color: var(--green); }
+  .score-input.invalid { border-color: var(--red); }
+  .vs-label {
+    font-size: 0.75rem; color: var(--text-light);
+    text-align: center; padding: 0 0.25rem;
+  }
+  .remove-game {
+    background: none; border: none; color: var(--text-light);
+    cursor: pointer; font-size: 1.1rem; padding: 0.5rem;
+    transition: color 0.15s; line-height: 1;
+  }
+  .remove-game:hover { color: var(--red); }
+  .score-hint {
+    font-size: 0.72rem; color: var(--text-light);
+    margin-bottom: 1rem; min-height: 1.2rem;
+  }
+  .result-btn {
+    flex: 1; background: var(--bg-card); border: 1px solid var(--border);
+    color: var(--mist); font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem; font-weight: 500; padding: 0.85rem;
+    cursor: pointer; transition: all 0.15s; border-radius: 0;
+    text-align: center;
+  }
+  .result-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .result-btn.selected-win  { background: rgba(93,186,138,0.15);  border-color: var(--green);  color: var(--green); }
+  .result-btn.selected-loss { background: rgba(224,92,92,0.12);   border-color: var(--red);    color: var(--red); }
+  .result-btn.selected-draw { background: rgba(184,205,224,0.08); border-color: var(--mist);   color: var(--mist); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div class="section-label">New match</div>
+  <h1 style="font-family:'Playfair Display',serif; font-size:1.6rem; margin-bottom:1.5rem;">Log a match</h1>
+
+  <form method="POST" action="{{ url_for('matches.log_match') }}" id="match-form">
+
+    {# ── Sport picker ── #}
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-title">Sport</div>
+      <div style="display:flex; flex-wrap:wrap; gap:0.5rem;" id="sport-buttons">
+        {% for sport in sports %}
+          <button type="button" class="sport-btn" data-sport-id="{{ sport.id }}"
+                  data-scoring="{{ sport.scoring_type }}"
+                  data-target="{{ sport.target_score or '' }}"
+                  data-win-by-two="{{ sport.win_by_two | lower }}"
+                  data-cap="{{ sport.score_cap or '' }}"
+                  data-allows-draw="{{ sport.allows_draw | lower }}"
+                  onclick="selectSport(this)">
+            {{ sport.name }}
+          </button>
+        {% endfor %}
+      </div>
+      <input type="hidden" name="sport_id" id="sport_id" required>
+    </div>
+
+    {# ── Opponent picker ── #}
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-title">Opponent</div>
+      <div class="form-group" style="margin-bottom:0;">
+        <select class="form-input" name="opponent_id" id="opponent_id" required>
+          <option value="" disabled selected>Select opponent…</option>
+          {% for user in users %}
+            <option value="{{ user.id }}">{{ user.username }}</option>
+          {% endfor %}
+        </select>
+        {% if not users %}
+          <div style="font-size:0.78rem; color:var(--text-light); margin-top:0.5rem;">
+            No other players registered yet.
+            <a href="{{ url_for('social.search_players') }}" style="color:var(--accent);">Find players →</a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# ── Location (optional) ── #}
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-title">Location <span style="font-size:0.75rem; color:var(--text-light); font-family:'DM Sans',sans-serif; font-weight:300;">(optional)</span></div>
+      <div class="form-group" style="margin-bottom:0;">
+        <input class="form-input" type="text" name="location" id="location"
+               placeholder="e.g. Sports Centre Court 3" maxlength="200">
+      </div>
+    </div>
+
+    {# ── Score entry — numeric sports ── #}
+    <div class="card" id="numeric-section" style="display:none; margin-bottom:1rem;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;">
+        <div class="card-title" style="margin-bottom:0;">Game scores</div>
+        <div style="font-size:0.72rem; color:var(--text-light);" id="you-vs-label">You vs opponent</div>
+      </div>
+
+      <div class="score-hint" id="score-hint"></div>
+
+      <div id="games-container"></div>
+
+      <button type="button" onclick="addGameRow()" id="add-game-btn"
+              class="btn btn-outline btn-sm" style="margin-top:0.25rem;">
+        + Add game
+      </button>
+    </div>
+
+    {# ── Result entry — result-only sports (chess) ── #}
+    <div class="card" id="result-section" style="display:none; margin-bottom:1rem;">
+      <div class="card-title">Result</div>
+      <input type="hidden" name="result" id="result-input">
+      <div style="display:flex; gap:0.75rem;">
+        <button type="button" class="result-btn" onclick="selectResult('win',  this)">Win</button>
+        <button type="button" class="result-btn" onclick="selectResult('loss', this)">Loss</button>
+        <button type="button" class="result-btn" id="draw-btn"
+                onclick="selectResult('draw', this)" style="display:none;">Draw</button>
+      </div>
+    </div>
+
+    {# ── Submit ── #}
+    <div id="submit-section" style="display:none;">
+      <button type="submit" class="btn btn-primary" id="submit-btn">Log match</button>
+    </div>
+
+  </form>
+</div>
+
+<script>
+  // ── Sport state ──────────────────────────────────────────────────────────
+  let currentSport = null;
+  let gameCount    = 0;
+
+  function selectSport(btn) {
+    document.querySelectorAll('.sport-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+
+    currentSport = {
+      id:         btn.dataset.sportId,
+      scoring:    btn.dataset.scoring,
+      target:     btn.dataset.target     ? parseInt(btn.dataset.target)  : null,
+      winByTwo:   btn.dataset.winByTwo   === 'true',
+      cap:        btn.dataset.cap        ? parseInt(btn.dataset.cap)     : null,
+      allowsDraw: btn.dataset.allowsDraw === 'true',
+      name:       btn.textContent.trim(),
+    };
+
+    document.getElementById('sport_id').value = currentSport.id;
+
+    // Show the right scoring section
+    const isNumeric = currentSport.scoring === 'numeric';
+    document.getElementById('numeric-section').style.display = isNumeric ? 'block' : 'none';
+    document.getElementById('result-section').style.display  = isNumeric ? 'none'  : 'block';
+    document.getElementById('submit-section').style.display  = 'block';
+    document.getElementById('draw-btn').style.display = currentSport.allowsDraw ? 'flex' : 'none';
+
+    // Update score hint
+    updateScoreHint();
+
+    // Reset game rows and add one to start
+    if (isNumeric) {
+      document.getElementById('games-container').innerHTML = '';
+      gameCount = 0;
+      addGameRow();
+    }
+
+    // Reset result
+    document.getElementById('result-input').value = '';
+    document.querySelectorAll('.result-btn').forEach(b => b.className = 'result-btn');
+  }
+
+  function updateScoreHint() {
+    if (!currentSport) return;
+    const parts = [];
+    if (currentSport.target)   parts.push(`First to ${currentSport.target}`);
+    if (currentSport.winByTwo) parts.push('win by 2');
+    if (currentSport.cap)      parts.push(`cap ${currentSport.cap}`);
+    document.getElementById('score-hint').textContent = parts.join(' · ');
+  }
+
+  // ── Game rows ─────────────────────────────────────────────────────────────
+  function addGameRow() {
+    gameCount++;
+    const n   = gameCount;
+    const con = document.getElementById('games-container');
+
+    // Update opponent label from select
+    const sel      = document.getElementById('opponent_id');
+    const oppLabel = sel.options[sel.selectedIndex]?.text || 'Opponent';
+
+    const row = document.createElement('div');
+    row.className = 'game-row';
+    row.id        = `game-row-${n}`;
+    row.innerHTML = `
+      <div>
+        <div class="game-label">You</div>
+        <input class="score-input" type="number" name="score_p1_${n}"
+               id="s1_${n}" min="0" max="99" inputmode="numeric"
+               onchange="validateRow(${n})" oninput="validateRow(${n})" required>
+      </div>
+      <div class="vs-label">Game ${n}</div>
+      <div>
+        <div class="game-label" id="opp-label-${n}">${oppLabel}</div>
+        <input class="score-input" type="number" name="score_p2_${n}"
+               id="s2_${n}" min="0" max="99" inputmode="numeric"
+               onchange="validateRow(${n})" oninput="validateRow(${n})" required>
+      </div>
+      ${gameCount > 1
+        ? `<button type="button" class="remove-game" onclick="removeRow(${n})" title="Remove game">✕</button>`
+        : `<div></div>`}
+    `;
+    con.appendChild(row);
+    row.querySelector(`#s1_${n}`).focus();
+  }
+
+  function removeRow(n) {
+    const row = document.getElementById(`game-row-${n}`);
+    if (row) row.remove();
+  }
+
+  function validateRow(n) {
+    if (!currentSport || currentSport.scoring !== 'numeric') return;
+
+    const s1el = document.getElementById(`s1_${n}`);
+    const s2el = document.getElementById(`s2_${n}`);
+    if (!s1el || !s2el) return;
+
+    const s1 = parseInt(s1el.value);
+    const s2 = parseInt(s2el.value);
+    if (isNaN(s1) || isNaN(s2)) return;
+
+    const { target, winByTwo, cap } = currentSport;
+    const high = Math.max(s1, s2);
+    const low  = Math.min(s1, s2);
+    let valid  = true;
+
+    // Cap check
+    if (cap !== null && high > cap) valid = false;
+    // Target check
+    if (target !== null && high < target) valid = false;
+    // Win by two check
+    if (winByTwo && (high - low) < 2) valid = false;
+    // If both past target, must be exactly 2 apart
+    if (winByTwo && target !== null && low >= target && (high - low) !== 2) valid = false;
+
+    [s1el, s2el].forEach(el => {
+      el.classList.toggle('valid',   valid);
+      el.classList.toggle('invalid', !valid);
+    });
+  }
+
+  // ── Result picker ─────────────────────────────────────────────────────────
+  function selectResult(value, btn) {
+    document.getElementById('result-input').value = value;
+    document.querySelectorAll('.result-btn').forEach(b => {
+      b.className = 'result-btn';
+    });
+    btn.classList.add(`selected-${value}`);
+  }
+
+  // ── Keep opponent label in sync ───────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('opponent_id').addEventListener('change', function() {
+      const label = this.options[this.selectedIndex]?.text || 'Opponent';
+      document.querySelectorAll('[id^="opp-label-"]').forEach(el => {
+        el.textContent = label;
+      });
+    });
+  });
+
+  // ── Form validation before submit ─────────────────────────────────────────
+  document.getElementById('match-form').addEventListener('submit', function(e) {
+    if (!currentSport) {
+      e.preventDefault();
+      alert('Please select a sport.');
+      return;
+    }
+    if (currentSport.scoring === 'result' && !document.getElementById('result-input').value) {
+      e.preventDefault();
+      alert('Please select a result (Win / Loss / Draw).');
+      return;
+    }
+    if (!document.getElementById('opponent_id').value) {
+      e.preventDefault();
+      alert('Please select an opponent.');
+    }
+  });
+</script>
+{% endblock %}

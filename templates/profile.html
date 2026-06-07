@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}{{ player.username }} — Trackr{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  {# ── Header ── #}
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+    <div>
+      <div class="section-label">Profile</div>
+      <h1 style="font-family:'Playfair Display',serif; font-size:1.6rem;">
+        {{ player.username }}
+        {% if own_profile %}<span style="font-size:0.9rem; color:var(--text-light); font-family:'DM Sans',sans-serif; font-weight:300;"> (you)</span>{% endif %}
+      </h1>
+    </div>
+    {% if own_profile %}
+      <a href="{{ url_for('matches.log_match') }}" class="btn btn-primary" style="width:auto;">+ Log match</a>
+    {% else %}
+      <a href="{{ url_for('stats.head_to_head', opponent_id=player.id) }}" class="btn btn-outline" style="width:auto;">H2H →</a>
+    {% endif %}
+  </div>
+
+  {# ── Overall stat boxes ── #}
+  <div class="stat-grid" style="margin-bottom:1rem;">
+    <div class="stat-box">
+      <div class="stat-num">{{ overall.wins }}</div>
+      <div class="stat-lbl">Wins</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num">{{ overall.losses }}</div>
+      <div class="stat-lbl">Losses</div>
+    </div>
+    {% if overall.draws > 0 %}
+    <div class="stat-box">
+      <div class="stat-num">{{ overall.draws }}</div>
+      <div class="stat-lbl">Draws</div>
+    </div>
+    {% endif %}
+    <div class="stat-box">
+      <div class="stat-num">{{ (overall.rate * 100) | round(0) | int }}%</div>
+      <div class="stat-lbl">Win rate</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num">{{ overall.total }}</div>
+      <div class="stat-lbl">Matches</div>
+    </div>
+    {% if streak.type %}
+    <div class="stat-box">
+      <div class="stat-num" style="color:{% if streak.type == 'W' %}var(--green){% elif streak.type == 'L' %}var(--red){% else %}var(--mist){% endif %};">
+        {{ streak.length }}{{ streak.type }}
+      </div>
+      <div class="stat-lbl">Current streak</div>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── Game-level stats (only if they've played numeric sports) ── #}
+  {% if game_stats.games_played > 0 %}
+  <div class="card" style="margin-bottom:1rem;">
+    <div class="card-title">Game stats</div>
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:1px;">
+      <div style="text-align:center; padding:0.75rem;">
+        <div style="font-size:1.3rem; font-weight:500; color:var(--accent);">{{ game_stats.avg_scored }}</div>
+        <div style="font-size:0.65rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-light); margin-top:0.2rem;">Avg scored</div>
+      </div>
+      <div style="text-align:center; padding:0.75rem;">
+        <div style="font-size:1.3rem; font-weight:500; color:var(--accent);">{{ game_stats.avg_conceded }}</div>
+        <div style="font-size:0.65rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-light); margin-top:0.2rem;">Avg conceded</div>
+      </div>
+      <div style="text-align:center; padding:0.75rem;">
+        <div style="font-size:1.3rem; font-weight:500; color:var(--accent);">{{ (game_stats.game_win_pct * 100) | round(0) | int }}%</div>
+        <div style="font-size:0.65rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-light); margin-top:0.2rem;">Games won</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Per-sport breakdown ── #}
+  {% if breakdown %}
+  <div class="card" style="margin-bottom:1rem;">
+    <div class="card-title">By sport</div>
+    {% for s in breakdown %}
+      <div style="display:flex; align-items:center; justify-content:space-between;
+                  padding:0.75rem 0; border-bottom:1px solid var(--border);">
+        <div>
+          <div style="font-size:0.9rem; font-weight:500; color:var(--white);">{{ s.sport_name }}</div>
+          <div style="font-size:0.72rem; color:var(--text-light); margin-top:0.2rem;">
+            {{ s.wins }}W · {{ s.losses }}L{% if s.draws > 0 %} · {{ s.draws }}D{% endif %} · {{ s.total }} played
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:1.1rem; font-weight:500;
+                      color:{% if s.rate >= 0.6 %}var(--green){% elif s.rate >= 0.4 %}var(--mist){% else %}var(--red){% endif %};">
+            {{ (s.rate * 100) | round(0) | int }}%
+          </div>
+          <div style="font-size:0.65rem; color:var(--text-light);">win rate</div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── Form chart ── #}
+  <div class="card" style="margin-bottom:1rem;">
+    <div class="card-title">Recent form</div>
+    {% if overall.total > 0 %}
+      <canvas id="formChart" height="120"></canvas>
+    {% else %}
+      <div class="empty-state" style="padding:1.5rem;">
+        No confirmed matches yet.
+      </div>
+    {% endif %}
+  </div>
+
+  {# ── Empty state ── #}
+  {% if overall.total == 0 %}
+    <div class="empty-state">
+      {% if own_profile %}
+        No matches logged yet. <a href="{{ url_for('matches.log_match') }}">Log your first →</a>
+      {% else %}
+        {{ player.username }} hasn't played any confirmed matches yet.
+      {% endif %}
+    </div>
+  {% endif %}
+
+</div>
+
+{% if overall.total > 0 %}
+<script>
+  const userId   = {{ player.id }};
+  const apiUrl   = "{{ url_for('stats.form_json') }}?n=20";
+
+  fetch(apiUrl)
+    .then(r => r.json())
+    .then(data => {
+      const colors = data.results.map(r =>
+        r === 'W' ? '#5dba8a' : r === 'L' ? '#e05c5c' : '#8fa8c4'
+      );
+      new Chart(document.getElementById('formChart'), {
+        type: 'bar',
+        data: {
+          labels:   data.labels,
+          datasets: [{
+            data:            data.results.map(r => r === 'W' ? 1 : r === 'D' ? 0.5 : -1),
+            backgroundColor: colors,
+            borderWidth:     0,
+            borderRadius:    2,
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const map = { '1': 'Win', '-1': 'Loss', '0.5': 'Draw' };
+                  return `${map[String(ctx.raw)] || ctx.raw} — ${data.sports[ctx.dataIndex]}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: '#8fa8c4', font: { size: 10 }, maxRotation: 45 },
+              grid:  { color: 'rgba(184,205,224,0.06)' }
+            },
+            y: {
+              display: false,
+              min: -1.2, max: 1.2,
+            }
+          }
+        }
+      });
+    });
+</script>
+{% endif %}
+{% endblock %}
