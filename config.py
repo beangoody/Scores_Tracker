@@ -1,9 +1,5 @@
 """config.py
 Flask configuration classes for Trackr.
-
-Usage in app factory:
-    from config import config_map
-    app.config.from_object(config_map[os.environ.get("FLASK_ENV", "development")])
 """
 
 import os
@@ -13,21 +9,14 @@ basedir = Path(__file__).resolve().parent
 
 
 def _fix_postgres_url(url):
-    """Railway and Heroku provide DATABASE_URL starting with postgres://
-    but SQLAlchemy 1.4+ requires postgresql://. Fix it silently.
-    """
+    """Railway provides postgres:// but SQLAlchemy needs postgresql://"""
     if url and url.startswith("postgres://"):
         return url.replace("postgres://", "postgresql://", 1)
     return url
 
 
 class Config:
-    """Base configuration shared across all environments."""
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-
-    @staticmethod
-    def init_app(app):
-        pass
 
 
 class DevelopmentConfig(Config):
@@ -48,24 +37,12 @@ class TestingConfig(Config):
 
 class ProductionConfig(Config):
     DEBUG = False
-
-    @property
-    def SECRET_KEY(self):
-        key = os.environ.get("SECRET_KEY")
-        if not key:
-            raise ValueError(
-                "SECRET_KEY environment variable is not set."
-            )
-        return key
-
-    @property
-    def SQLALCHEMY_DATABASE_URI(self):
-        url = _fix_postgres_url(os.environ.get("DATABASE_URL"))
-        if not url:
-            raise ValueError(
-                "DATABASE_URL environment variable is not set."
-            )
-        return url
+    # These are evaluated when the class is loaded, not as properties,
+    # so Flask-SQLAlchemy can read them correctly from the config dict.
+    SECRET_KEY = os.environ.get("SECRET_KEY", "")
+    SQLALCHEMY_DATABASE_URI = (
+        _fix_postgres_url(os.environ.get("DATABASE_URL")) or ""
+    )
 
 
 config_map = {
