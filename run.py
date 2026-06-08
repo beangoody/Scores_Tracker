@@ -1,13 +1,4 @@
-"""run.py
-Entry point for running Trackr locally.
-
-Usage:
-    python run.py
-
-Environment variables:
-    FLASK_ENV   — "development" (default) | "production" | "testing"
-    SECRET_KEY  — required in production
-"""
+"""run.py — entry point for running Trackr locally."""
 
 import os
 from app import create_app
@@ -17,7 +8,7 @@ app = create_app(config_name)
 
 if __name__ == "__main__":
     app.run(
-        host="0.0.0.0",   # accessible on your local network (useful for phone testing)
-        port=5000,
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000)),
         debug=(config_name == "development"),
     )
