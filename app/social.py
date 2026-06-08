@@ -112,29 +112,9 @@ def get_friend_recommendations(user_id: int, limit: int = 8) -> list[dict]:
     # ── Fill remaining slots with most-active players ─────────────────────────
     if len(recommendations) < limit:
         from app.models import Match
-        from sqlalchemy import func
-
-        # Count confirmed matches per player
-        match_counts = (
-            db.session.query(
-                Match.player1_id.label("uid"),
-                func.count(Match.id).label("cnt"),
-            )
-            .filter(Match.confirmed == True)
-            .group_by(Match.player1_id)
-            .union_all(
-                db.session.query(
-                    Match.player2_id.label("uid"),
-                    func.count(Match.id).label("cnt"),
-                )
-                .filter(Match.confirmed == True)
-                .group_by(Match.player2_id)
-            )
-            .subquery()
-        )
 
         already_rec_ids = {r["user"].id for r in recommendations} | already_known
-        pending_sent    = {
+        pending_sent = {
             req.to_user_id
             for req in FriendRequest.query.filter_by(
                 from_user_id=user_id, status="pending"
@@ -142,20 +122,26 @@ def get_friend_recommendations(user_id: int, limit: int = 8) -> list[dict]:
         }
         exclude = already_rec_ids | pending_sent
 
-        active_users = (
-            db.session.query(
-                User,
-                func.sum(match_counts.c.cnt).label("total"),
-            )
-            .join(match_counts, User.id == match_counts.c.uid)
+        # Fetch all users not already known, then count matches in Python
+        # Simpler than a union subquery and works identically on SQLite + PostgreSQL
+        candidates = (
+            User.query
             .filter(User.id.notin_(exclude))
-            .group_by(User.id)
-            .order_by(func.sum(match_counts.c.cnt).desc())
-            .limit(limit - len(recommendations))
             .all()
         )
 
-        for user, total in active_users:
+        scored = []
+        for candidate in candidates:
+            total = Match.query.filter(
+                ((Match.player1_id == candidate.id) | (Match.player2_id == candidate.id)),
+                Match.confirmed == True,
+            ).count()
+            if total > 0:
+                scored.append((candidate, total))
+
+        scored.sort(key=lambda x: x[1], reverse=True)
+
+        for user, total in scored[:limit - len(recommendations)]:
             recommendations.append({
                 "user":    user,
                 "reason":  f"{total} match{'es' if total != 1 else ''} played",

@@ -203,7 +203,12 @@
       .btn-primary { width: auto; }
     }
   </style>
+  {# Apple PWA meta tags #}
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <meta name="apple-mobile-web-app-title" content="Trackr">
   {% block extra_head %}{% endblock %}
+  {# Load app.js before closing head #}
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
 </head>
 <body>
 
