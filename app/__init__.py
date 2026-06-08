@@ -26,7 +26,7 @@ def load_user(user_id):
 
 
 def create_app(config_name: str = "development") -> Flask:
-    app = Flask(__name__, instance_relative_config=False, template_folder="../templates", static_folder="../static")
+    app = Flask(__name__, instance_relative_config=False, template_folder="../templates")
     app.config.from_object(config_map.get(config_name, config_map["default"]))
 
     # Extensions
@@ -39,12 +39,14 @@ def create_app(config_name: str = "development") -> Flask:
     from app.stats   import stats_bp
     from app.social  import social_bp
     from app.sports  import sports_bp
+    from app.notifications import push_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(matches_bp)
     app.register_blueprint(stats_bp)
     app.register_blueprint(social_bp)
     app.register_blueprint(sports_bp)
+    app.register_blueprint(push_bp)
 
     # Create tables for any models that don't exist yet.
     # In production you'd use Flask-Migrate instead, but this is

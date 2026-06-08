@@ -247,3 +247,32 @@ class FriendRequest(db.Model):
         return (
             f"<FriendRequest {self.from_user_id} → {self.to_user_id} ({self.status})>"
         )
+
+
+class PushSubscription(db.Model):
+    """Stores a Web Push subscription for one user on one device.
+
+    A user can have multiple subscriptions (phone + tablet etc).
+    Expired subscriptions are cleaned up automatically when a push fails.
+    """
+    __tablename__ = "push_subscriptions"
+
+    id                = db.Column(db.Integer, primary_key=True)
+    user_id           = db.Column(db.Integer, db.ForeignKey("users.id"),
+                                  nullable=False)
+    # The push endpoint URL — unique per device
+    endpoint          = db.Column(db.Text, nullable=False)
+    # Full subscription JSON including keys
+    subscription_json = db.Column(db.Text, nullable=False)
+    created_at        = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", backref=db.backref(
+        "push_subscriptions", cascade="all, delete-orphan"
+    ))
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "endpoint", name="uix_user_endpoint"),
+    )
+
+    def __repr__(self):
+        return f"<PushSubscription user={self.user_id}>"
